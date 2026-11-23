@@ -1,0 +1,11 @@
+# 构建产物（Source 本地编译输出，发行 DLL 在 1.7/Assemblies 中另行提交）
+Source/bin/
+Source/obj/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.user

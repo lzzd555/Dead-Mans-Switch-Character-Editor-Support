@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>DMSCharacterEditorSupport</AssemblyName>
+    <RootNamespace>DMSCharacterEditorSupport</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <!-- 产物名不带 TFM 后缀，直接可复制进 Assemblies -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <!-- 源文件用 SDK 默认集合（已排除 obj/ 与 bin/）。不要关掉默认集合再手写 **/*.cs：
+       那样会把 obj 下生成的 AssemblyInfo 也编进去，重复构建出 CS2002，
+       先 Debug 再 Release 则出 CS0579 -->
+
+  <ItemGroup>
+    <!-- RimWorld 1.7（本机实际安装 1.7.5014，程序集在 app 根目录，net10/WaylithCLR） -->
+    <Reference Include="Assembly-CSharp">
+      <HintPath>/Users/lzzd/Library/Application Support/Steam/steamapps/common/RimWorld/RimWorld.app/Contents/MacOS/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityStubs">
+      <HintPath>/Users/lzzd/Library/Application Support/Steam/steamapps/common/RimWorld/RimWorld.app/Contents/MacOS/UnityStubs.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Harmony 3.0（工坊 2009463077 的 1.7 目录） -->
+    <Reference Include="0Harmony">
+      <HintPath>/Users/lzzd/Library/Application Support/Steam/steamapps/workshop/content/294100/2009463077/1.7/Assemblies/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Character Editor 与 Fortified 没有可用的公开接口（类型全是 internal）：
+         只在运行时按名字反射定位，不作为编译引用 -->
+  </ItemGroup>
+
+</Project>

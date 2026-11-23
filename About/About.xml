@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Dead Man's Switch - Character Editor Support</name>
+  <author>lzzd</author>
+  <packageId>lzzd.DMS.CharacterEditorSupport</packageId>
+  <supportedVersions>
+    <li>1.7</li>
+  </supportedVersions>
+  <description>Lets Character Editor open the mechanoids and synthetics from The Dead Man's Switch and its add-ons.\n\nCharacter Editor only recognises a selected unit when its type is exactly Pawn. Vanilla mechanoids are, but every DMS unit uses a Pawn subclass, so selecting one and opening the editor showed someone else. This patch makes Character Editor accept DMS units both when opening the editor and in its pawn list. Other mods' units are not affected.\n\nRequires Harmony, The Dead Man's Switch and Character Editor.\n\n让 Character Editor 能编辑《失能机关》（The Dead Man's Switch）及其拓展的机械体、合成人。\n\nCharacter Editor 只把类型恰好是 Pawn 的单位认作小人。原版机械体正好是 Pawn，而失能机关的单位全部是 Pawn 的子类，所以选中它们再打开编辑器时显示的是别人。本补丁让 Character Editor 在打开编辑器和同步小人列表时认出失能机关的单位；其他模组不受影响。\n\n需要 Harmony、失能机关本体和 Character Editor。</description>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+      <steamWorkshopUrl>https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077</steamWorkshopUrl>
+    </li>
+    <li>
+      <packageId>Aoba.DeadManSwitch.Core</packageId>
+      <displayName>The Dead Man's Switch</displayName>
+      <steamWorkshopUrl>https://steamcommunity.com/sharedfiles/filedetails/?id=3819799478</steamWorkshopUrl>
+    </li>
+    <li>
+      <packageId>void.charactereditor</packageId>
+      <displayName>Character Editor</displayName>
+      <steamWorkshopUrl>https://steamcommunity.com/sharedfiles/filedetails/?id=1874644848</steamWorkshopUrl>
+    </li>
+  </modDependencies>
+  <loadAfter>
+    <li>brrainz.harmony</li>
+    <li>Aoba.DeadManSwitch.Core</li>
+    <li>void.charactereditor</li>
+  </loadAfter>
+</ModMetaData>
