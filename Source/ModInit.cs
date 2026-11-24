@@ -13,12 +13,17 @@ namespace DMSCharacterEditorSupport
         static ModInit()
         {
             var harmony = new Harmony("lzzd.DMS.CharacterEditorSupport");
-            PatchResult result = Patch_Selection.Apply(harmony);
-            if (result == null)
+            var result = new PatchResult();
+            if (!CeAccess.Init(result))
             {
                 // Character Editor 未加载；About 已声明硬依赖，这里不重复提示
                 return;
             }
+
+            Patch_Selection.Apply(harmony, result);
+            Patch_BioSections.Apply(harmony, result);
+            Patch_BioWrites.Apply(harmony, result);
+            Patch_ExceptionLog.Apply(harmony, result);
 
             foreach (KeyValuePair<string, Exception> error in result.Errors)
             {

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using RimWorld;
@@ -7,98 +6,25 @@ using Verse;
 
 namespace DMSCharacterEditorSupport
 {
-    public sealed class PatchResult
-    {
-        public int Total;
-
-        public int Patched;
-
-        /// <summary>没打上的目标：找不到，或 Harmony 报错。</summary>
-        public List<string> Failed = new List<string>();
-
-        /// <summary>Harmony 打补丁时抛出的原始异常，键为目标名。</summary>
-        public List<KeyValuePair<string, Exception>> Errors = new List<KeyValuePair<string, Exception>>();
-    }
-
     /// <summary>
     /// Character Editor 从"地图当前选中项"确定要编辑的小人时，用的是精确类型比较
     /// GetType() == typeof(Pawn)。原版机械体正好是 Pawn，DMS 一家全部是 Pawn 子类，
     /// 因此被判成"不是小人"：选中 DMS 机械体再打开编辑器，显示的是列表里的别人。
     ///
-    /// CE 涉及的类型全是 internal，只能按名字反射定位后手动 Patch：
+    /// 两处补丁都只在 CE 自己没认出来（选中的是 DMS 子类小人）时补上结果，其余情况不插手：
     ///   - PosTool.FirstPawnFromSelector：编辑器左侧小人列表同步地图选中项；
     ///   - EditorUI.PreselectPawn：打开编辑器时确定初始小人。
-    /// 两处都只在 CE 自己没认出来（选中的是 DMS 子类小人）时补上结果，其余情况不插手。
     /// </summary>
     public static class Patch_Selection
     {
-        private static MethodInfo _apiGetter;
-
-        private static MethodInfo _apiPawnGetter;
-
-        private static MethodInfo _apiPawnSetter;
-
-        private static MethodInfo _inStartingScreenGetter;
-
-        /// <summary>返回 null 表示 Character Editor 未加载。</summary>
-        public static PatchResult Apply(Harmony harmony)
+        public static void Apply(Harmony harmony, PatchResult result)
         {
-            Type ceType = AccessTools.TypeByName("CharacterEditor.CEditor");
-            Type posToolType = AccessTools.TypeByName("CharacterEditor.PosTool");
-            if (ceType == null && posToolType == null)
-            {
-                return null;
-            }
-
-            var result = new PatchResult();
-            Type editorUiType = ceType == null ? null : AccessTools.Inner(ceType, "EditorUI");
-            bool editorUiResolved = editorUiType != null;
-            if (editorUiResolved)
-            {
-                _apiGetter = AccessTools.PropertyGetter(ceType, "API");
-                _apiPawnGetter = AccessTools.PropertyGetter(ceType, "Pawn");
-                _apiPawnSetter = AccessTools.PropertySetter(ceType, "Pawn");
-                _inStartingScreenGetter = AccessTools.PropertyGetter(ceType, "InStartingScreen");
-                if (_apiGetter == null || _apiPawnGetter == null || _apiPawnSetter == null || _inStartingScreenGetter == null)
-                {
-                    result.Failed.Add("CEditor.API / Pawn / InStartingScreen");
-                }
-            }
-            else
-            {
-                result.Failed.Add("CEditor+EditorUI");
-            }
-
-            TryPatch(harmony,
-                posToolType == null ? null : AccessTools.DeclaredMethod(posToolType, "FirstPawnFromSelector", new[] { typeof(Selector) }),
-                "PosTool.FirstPawnFromSelector", null, nameof(FirstPawnFromSelector_Postfix), result);
-            TryPatch(harmony,
-                editorUiResolved ? AccessTools.DeclaredMethod(editorUiType, "PreselectPawn", new[] { typeof(Pawn) }) : null,
-                "EditorUI.PreselectPawn", nameof(PreselectPawn_Prefix), nameof(PreselectPawn_Postfix), result);
-            return result;
-        }
-
-        private static void TryPatch(Harmony harmony, MethodInfo target, string label, string prefix, string postfix, PatchResult result)
-        {
-            result.Total++;
-            if (target == null)
-            {
-                result.Failed.Add(label);
-                return;
-            }
-            try
-            {
-                harmony.Patch(target,
-                    prefix == null ? null : new HarmonyMethod(typeof(Patch_Selection), prefix),
-                    postfix == null ? null : new HarmonyMethod(typeof(Patch_Selection), postfix));
-                result.Patched++;
-            }
-            catch (Exception e)
-            {
-                // 保留原始异常交给 ModInit 记日志；另一个目标照常尝试
-                result.Failed.Add($"{label}: {e.GetType().Name} {e.Message}");
-                result.Errors.Add(new KeyValuePair<string, Exception>(label, e));
-            }
+            CeAccess.TryPatch(harmony, typeof(Patch_Selection),
+                CeAccess.Method(CeAccess.PosToolType, "FirstPawnFromSelector", typeof(Selector)),
+                "PosTool.FirstPawnFromSelector", result, postfix: nameof(FirstPawnFromSelector_Postfix));
+            CeAccess.TryPatch(harmony, typeof(Patch_Selection),
+                CeAccess.Method(CeAccess.EditorUiType, "PreselectPawn", typeof(Pawn)),
+                "EditorUI.PreselectPawn", result, prefix: nameof(PreselectPawn_Prefix), postfix: nameof(PreselectPawn_Postfix));
         }
 
         /// <summary>地图上直接选中的 DMS 小人；其余情况返回 null。</summary>
@@ -135,7 +61,7 @@ namespace DMSCharacterEditorSupport
         /// </summary>
         public static void PreselectPawn_Prefix(ref Pawn __0)
         {
-            if (__0 != null || InStartingScreen())
+            if (__0 != null || CeAccess.InStartingScreen())
             {
                 return;
             }
@@ -145,35 +71,20 @@ namespace DMSCharacterEditorSupport
         /// <summary>选中的容器里装着 DMS 小人、而原方法没认出来（没设置或设成了别人）时补上。</summary>
         public static void PreselectPawn_Postfix(Pawn __0)
         {
-            if (__0 != null || InStartingScreen())
+            if (__0 != null || CeAccess.InStartingScreen())
             {
                 return;
             }
             Pawn pawn = PawnInSelectedCasket(MapSelectorOrNull());
-            object api = pawn == null || _apiGetter == null ? null : _apiGetter.Invoke(null, null);
-            if (api == null || _apiPawnSetter == null)
+            if (pawn != null && !ReferenceEquals(CeAccess.EditorPawn(), pawn))
             {
-                return;
-            }
-            if (!ReferenceEquals(_apiPawnGetter?.Invoke(api, null), pawn))
-            {
-                _apiPawnSetter.Invoke(api, new[] { pawn });
+                CeAccess.SetEditorPawn(pawn);
             }
         }
 
         private static Selector MapSelectorOrNull()
         {
             return Current.Game?.CurrentMap == null ? null : Find.Selector;
-        }
-
-        private static bool InStartingScreen()
-        {
-            if (_inStartingScreenGetter == null)
-            {
-                // 与 CE 原实现的判据一致（开局页面 = 不在 Playing 状态）
-                return Current.ProgramState != ProgramState.Playing;
-            }
-            return (bool)_inStartingScreenGetter.Invoke(null, null);
         }
     }
 }

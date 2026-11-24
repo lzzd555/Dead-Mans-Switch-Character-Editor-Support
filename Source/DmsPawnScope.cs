@@ -25,6 +25,19 @@ namespace DMSCharacterEditorSupport
             return IsSupportedType(pawn.GetType(), source?.Name, source?.PackageId);
         }
 
+        /// <summary>
+        /// 是否是 DMS 的机械体：在放行范围内，且不是人形种族。
+        /// DMS 一家的 intelligence 都是 ToolUser 而不是 Humanlike，原版生成器因此从不给它们
+        /// 经历或特性。万一今后出现真正的 DMS 人形种族，它的经历和特性是真实存在的，照常编辑。
+        /// </summary>
+        public static bool IsMech(Pawn pawn)
+        {
+            return pawn != null
+                && pawn.def?.race != null
+                && !pawn.RaceProps.Humanlike
+                && IsSupported(pawn);
+        }
+
         public static bool IsSupportedType(Type type, string sourceModName, string sourceModPackageId)
         {
             if (type == null || type == typeof(Pawn) || !typeof(Pawn).IsAssignableFrom(type))
